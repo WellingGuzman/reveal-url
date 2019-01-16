@@ -54,18 +54,10 @@ module.exports = function (requestedUrl) {
     requestedUrl = ensureUrl(requestedUrl);
     // use head?
     request[protocol].get(requestedUrl, function (response) {
-      var err, result;
-
       if (isRedirection(response)) {
-        result = getUrl(requestedUrl, response);
+        resolve(getUrl(requestedUrl, response));
       } else {
-        err = new Error('not found');
-      }
-
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result);
+        reject(new Error('not found'));
       }
     }).on('error', err => reject(err));
   });

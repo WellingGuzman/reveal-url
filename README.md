@@ -8,7 +8,7 @@ This is an experiment out of curiosity to reveal the url from URL shorteners.
 const reveal = require('.');
 
 reveal('https://bit.ly/1Auq9db')
-    .then(url => console.log(url))
+    .then(console.log)
     .catch(err => console.log(err.message));
 
 reveal('https://qz.com/1523284')
