@@ -2,7 +2,7 @@ const url = require('url');
 
 const DEFAULT_PROTOCOL = 'http';
 
-const request = {
+const clients = {
   https: require('https'),
   http: require('http'),
 }
@@ -47,18 +47,40 @@ function getUrl(requestedUrl, response) {
   return requestedUrlParsed.protocol + '//' + requestedUrlParsed.host + redirectUrl;
 }
 
-module.exports = function (requestedUrl) {
+function fetch(requestedUrl) {
   return new Promise(function (resolve, reject) {
     const protocol = getProtocol(requestedUrl) || DEFAULT_PROTOCOL;
 
     requestedUrl = ensureUrl(requestedUrl);
     // use head?
-    request[protocol].get(requestedUrl, function (response) {
+    clients[protocol].get(requestedUrl, function (response) {
       if (isRedirection(response)) {
-        resolve(getUrl(requestedUrl, response));
+        // Resolve only pass the fist parameter
+        confirmHTTPSRedirection(getUrl(requestedUrl, response), requestedUrl)
+          .then(resolve)
+          .catch(reject);
       } else {
         reject(new Error('not found'));
       }
     }).on('error', err => reject(err));
   });
+}
+
+function isSameUrl(urlA, urlB) {
+  const protocolA = (getProtocol(urlA) || '');
+  const protocolB = (getProtocol(urlB) || '');
+
+  return urlA.slice(protocolA.length) === urlB.slice(protocolB.length);
+}
+
+function confirmHTTPSRedirection(nextUrl, requestedUrl) {
+  if (nextUrl.startsWith('https://') && isSameUrl(nextUrl, requestedUrl)) {
+    return fetch(nextUrl);
+  }
+
+  return Promise.resolve(nextUrl);
+}
+
+module.exports = function (requestedUrl) {
+  return fetch(requestedUrl);
 };
