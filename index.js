@@ -1,14 +1,12 @@
-const url = require('url');
-
+const parseUrl = require('url').parse;
 const DEFAULT_PROTOCOL = 'http';
-
 const clients = {
   https: require('https'),
   http: require('http'),
 }
 
-function getProtocol(requestedUrl) {
-  const parsedUrl = url.parse(requestedUrl);
+function getProtocol(url) {
+  const parsedUrl = parseUrl(url);
 
   if (parsedUrl && parsedUrl.protocol) {
     return parsedUrl.protocol.slice(0, -1);
@@ -17,14 +15,14 @@ function getProtocol(requestedUrl) {
   return null;
 }
 
-function ensureUrl(requestedUrl) {
-  const protocol = getProtocol(requestedUrl);
+function ensureUrl(url) {
+  const protocol = getProtocol(url);
 
   if (!protocol) {
-    requestedUrl = DEFAULT_PROTOCOL + '://' + requestedUrl;
+    url = DEFAULT_PROTOCOL + '://' + url;
   }
 
-  return requestedUrl;
+  return url;
 }
 
 function isRedirection(response) {
@@ -34,29 +32,29 @@ function isRedirection(response) {
   return isValidStatus && hasLocationHeader;
 }
 
-function getUrl(requestedUrl, response) {
+function getUrl(url, response) {
   const redirectUrl = response.headers.location;
-  const redirectUrlParsed = url.parse(redirectUrl);
+  const redirectUrlParsed = parseUrl(redirectUrl);
 
   if (redirectUrlParsed.hostname) {
     return redirectUrl;
   }
 
-  const requestedUrlParsed = url.parse(requestedUrl);
+  const parsedUrl= parseUrl(url);
 
-  return requestedUrlParsed.protocol + '//' + requestedUrlParsed.host + redirectUrl;
+  return parsedUrl.protocol + '//' + parsedUrl.host + redirectUrl;
 }
 
-function fetch(requestedUrl) {
+function fetch(url) {
   return new Promise(function (resolve, reject) {
-    const protocol = getProtocol(requestedUrl) || DEFAULT_PROTOCOL;
+    const protocol = getProtocol(url) || DEFAULT_PROTOCOL;
 
-    requestedUrl = ensureUrl(requestedUrl);
+    url = ensureUrl(url);
     // use head?
-    clients[protocol].get(requestedUrl, function (response) {
+    clients[protocol].get(url, function (response) {
       if (isRedirection(response)) {
         // Resolve only pass the fist parameter
-        confirmHTTPSRedirection(getUrl(requestedUrl, response), requestedUrl)
+        confirmHTTPSRedirection(getUrl(url, response), url)
           .then(resolve)
           .catch(reject);
       } else {
@@ -73,14 +71,14 @@ function isSameUrl(urlA, urlB) {
   return urlA.slice(protocolA.length) === urlB.slice(protocolB.length);
 }
 
-function confirmHTTPSRedirection(nextUrl, requestedUrl) {
-  if (nextUrl.startsWith('https://') && isSameUrl(nextUrl, requestedUrl)) {
-    return fetch(nextUrl);
+function confirmHTTPSRedirection(redirectUrl, requestedUrl) {
+  if (redirectUrl.startsWith('https://') && isSameUrl(redirectUrl, requestedUrl)) {
+    return fetch(redirectUrl);
   }
 
-  return Promise.resolve(nextUrl);
+  return Promise.resolve(redirectUrl);
 }
 
-module.exports = function (requestedUrl) {
-  return fetch(requestedUrl);
+module.exports = function (url) {
+  return fetch(url);
 };
