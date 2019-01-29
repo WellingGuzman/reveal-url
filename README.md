@@ -9,9 +9,9 @@ const reveal = require('.');
 
 reveal('https://bit.ly/1Auq9db')
     .then(console.log)
-    .catch(err => console.log(err.message));
+    .catch(console.error);
 
 reveal('https://qz.com/1523284')
     .then(console.log)
-    .catch(err => console.log(err.message));
+    .catch(console.error);
 ```
