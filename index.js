@@ -79,6 +79,4 @@ function confirmHTTPSRedirection(redirectUrl, requestedUrl) {
   return Promise.resolve(redirectUrl);
 }
 
-module.exports = function (url) {
-  return fetch(url);
-};
+module.exports = fetch;
