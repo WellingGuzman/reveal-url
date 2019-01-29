@@ -60,7 +60,7 @@ function fetch(url) {
       } else {
         reject(new Error('not found'));
       }
-    }).on('error', err => reject(err));
+    }).on('error', reject);
   });
 }
 
