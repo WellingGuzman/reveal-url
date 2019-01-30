@@ -20,6 +20,8 @@ function ensureUrl(url) {
 
   if (!protocol) {
     url = DEFAULT_PROTOCOL + '://' + url;
+  } else if (protocol !== 'http' && protocol !== 'https') {
+    throw new Error('Unsupported protocol "' + protocol  + '". Only http/https supported');
   }
 
   return url;
