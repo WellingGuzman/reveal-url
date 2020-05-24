@@ -5,6 +5,8 @@ const clients = {
   http: require('http'),
 }
 
+const urls = [];
+
 function getProtocol(url) {
   const parsedUrl = parseUrl(url);
 
@@ -52,15 +54,19 @@ function fetch(url) {
     const protocol = getProtocol(url) || DEFAULT_PROTOCOL;
 
     url = ensureUrl(url);
+    urls.push(url);
     // use head?
     clients[protocol].get(url, function (response) {
       if (isRedirection(response)) {
         // Resolve only pass the fist parameter
         confirmHTTPSRedirection(getUrl(url, response), url)
-          .then(resolve)
+          .then(function (url) {
+            urls.push(url);
+            resolve(urls);
+          })
           .catch(reject);
       } else {
-        reject(new Error('not found'));
+        resolve(urls);
       }
     }).on('error', reject);
   });
