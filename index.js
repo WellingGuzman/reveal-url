@@ -5,8 +5,6 @@ const clients = {
   http: require('http'),
 }
 
-const urls = [];
-
 function getProtocol(url) {
   const parsedUrl = parseUrl(url);
 
@@ -30,10 +28,11 @@ function ensureUrl(url) {
 }
 
 function isRedirection(response) {
-  const isValidStatus = response.statusCode >= 300 && response.statusCode <= 399;
-  const hasLocationHeader = response.headers.hasOwnProperty('location');
+  if (response.statusCode < 300 || response.statusCode >= 400) {
+    return false;
+  }
 
-  return isValidStatus && hasLocationHeader;
+  return response.headers.hasOwnProperty('location');
 }
 
 function getUrl(url, response) {
@@ -49,22 +48,25 @@ function getUrl(url, response) {
   return parsedUrl.protocol + '//' + parsedUrl.host + redirectUrl;
 }
 
-function fetch(url) {
+function fetch(url, urls) {
+  if (!urls) {
+    urls = [];
+  }
+
+  url = ensureUrl(url);
+  urls.push(url);
+
   return new Promise(function (resolve, reject) {
     const protocol = getProtocol(url) || DEFAULT_PROTOCOL;
 
-    url = ensureUrl(url);
-    urls.push(url);
-    // use head?
     clients[protocol].get(url, function (response) {
-      if (isRedirection(response)) {
-        // Resolve only pass the fist parameter
-        confirmHTTPSRedirection(getUrl(url, response), url)
-          .then(function (url) {
-            urls.push(url);
-            resolve(urls);
-          })
-          .catch(reject);
+      const isRedirectResponse = isRedirection(response);
+      const redirectUrl = isRedirectResponse ? getUrl(url, response) : null;
+
+      if (isRedirectResponse && redirectUrl) {
+        fetch(redirectUrl, urls).then(function (urls) {
+          resolve(urls);
+        }).catch(reject);
       } else {
         resolve(urls);
       }
@@ -79,6 +81,8 @@ function isSameUrl(urlA, urlB) {
   return urlA.slice(protocolA.length) === urlB.slice(protocolB.length);
 }
 
+// TODO: Remove this, not idea why we have the startsWith(https://) it should be any protocol
+//       Plus, it should be if the url are not the same
 function confirmHTTPSRedirection(redirectUrl, requestedUrl) {
   if (redirectUrl.startsWith('https://') && isSameUrl(redirectUrl, requestedUrl)) {
     return fetch(redirectUrl);
